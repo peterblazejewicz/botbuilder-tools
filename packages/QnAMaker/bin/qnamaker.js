@@ -32,6 +32,7 @@ const Endpointkeys = require('../lib/api/endpointkeys');
 const Operations = require('../lib/api/operations');
 const Delay = require('await-delay');
 const { ServiceBase } = require('../lib/api/serviceBase');
+const latestVersion = require('latest-version');
 
 function stdoutAsync(output) { return new Promise((done) => process.stdout.write(output, "utf-8", () => done())); }
 
@@ -47,6 +48,19 @@ async function runProgram() {
     if (argvFragment.length === 0) {
         argvFragment = ['-h'];
     }
+
+    const latest = await latestVersion(pkg.name, { version: `>${pkg.version}` })
+        .catch(() => pkg.version);
+    if (semver.gt(latest, pkg.version)) {
+        process.stderr.write(chalk.default.white(`\n     Update available `));
+        process.stderr.write(chalk.default.grey(`${pkg.version}`));
+        process.stderr.write(chalk.default.white(` -> `));
+        process.stderr.write(chalk.default.greenBright(`${latest}\n`));
+        process.stderr.write(chalk.default.white(`     Run `));
+        process.stderr.write(chalk.default.blueBright(`npm i -g ${pkg.name} `));
+        process.stderr.write(chalk.default.white(`to update.\n\n`));
+    }
+
     args = minimist(argvFragment);
 
     if (args['!'] ||
@@ -303,7 +317,7 @@ async function getFileInput(args) {
  * @returns {Promise<*>}
  */
 async function composeConfig() {
-    const { QNA_MAKER_SUBSCRIPTION_KEY, QNAMAKER_HOSTNAME, QNAMAKER_ENDPOINTKEY, QNA_MAKER_KBID } = process.env;
+    const { QNAMAKER_SUBSCRIPTION_KEY, QNAMAKER_HOSTNAME, QNAMAKER_ENDPOINTKEY, QNAMAKER_KBID } = process.env;
     const { subscriptionKey, hostname, endpointKey, kbId } = args;
 
     let qnamakerrcJson = {};
@@ -315,10 +329,10 @@ async function composeConfig() {
         // Do nothing
     } finally {
         config = {
-            subscriptionKey: (subscriptionKey || qnamakerrcJson.subscriptionKey || QNA_MAKER_SUBSCRIPTION_KEY),
+            subscriptionKey: (subscriptionKey || qnamakerrcJson.subscriptionKey || QNAMAKER_SUBSCRIPTION_KEY),
             hostname: (hostname || qnamakerrcJson.hostname || QNAMAKER_HOSTNAME),
             endpointKey: (endpointKey || qnamakerrcJson.endpointKey || QNAMAKER_ENDPOINTKEY),
-            kbId: (kbId || qnamakerrcJson.kbId || QNA_MAKER_KBID)
+            kbId: (kbId || qnamakerrcJson.kbId || QNAMAKER_KBID)
         };
     }
     return config;
